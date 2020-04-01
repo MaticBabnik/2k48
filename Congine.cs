@@ -9,20 +9,27 @@ namespace _2k48
        !🎮 Congine - high performance console "drawing" functions
         Matic Babnik 2020
     */
+
     public class Congine
     {
-        SafeFileHandle h;
+        #region Vars&Properties
+        public Win32.CharInfo[] Buffer;
         public Win32.SmallRect Rectangle;
         public bool Error
         {
             get;
         }
-        public Win32.CharInfo[] Buffer
-        {
-            get; set;
-        }
+
+        private SafeFileHandle h;
         private Win32.Coord Position = new Win32.Coord() { X = 0, Y = 0 };
         private Win32.Coord Size;
+        #endregion
+
+        /// <summary>
+        /// Initalizes an instance of Congine
+        /// </summary>
+        /// <param name="width">Buffer Width</param>
+        /// <param name="height">Buffer Height</param>
         public Congine(int width, int height)
         {
             Error = false;
@@ -43,15 +50,25 @@ namespace _2k48
             for (int i = 0; i < height; i++)
                 for (int j = 0; j < width; j++)
                 {
-                    Buffer[i * width + j].Attributes = Win32.TwoColor(Win32.Color.LtRed, Win32.Color.White);
+                    Buffer[i * width + j].Attributes = Win32.TwoColor(Win32.CColor.LtRed, Win32.CColor.White);
                     Buffer[i * width + j].Char.UnicodeChar = ' ';
                 }
-            DrawBuffer();
+            WriteToConsole();
         }
-        public void DrawBuffer()
+
+        /// <summary>
+        /// Writes the buffer to console
+        /// </summary>
+        public void WriteToConsole()
         {
             Win32.WriteConsoleOutput(h, Buffer, Size, Position, ref Rectangle);
         }
+
+        /// <summary>
+        /// Fills the buffer with the same char and attributes
+        /// </summary>
+        /// <param name="fillChar">Char</param>
+        /// <param name="fillAtr">Attributes</param>
         public void FillBuffer(char fillChar, short fillAtr)
         {
             short width = Size.X, height = Size.Y;
@@ -62,6 +79,16 @@ namespace _2k48
                     Buffer[i * width + j].Char.UnicodeChar = fillChar;
                 }
         }
+
+        /// <summary>
+        /// Fills a rectangle with the same char and char attributes
+        /// </summary>
+        /// <param name="x">X coord</param>
+        /// <param name="y">Y coord</param>
+        /// <param name="w">Width</param>
+        /// <param name="h">Height</param>
+        /// <param name="atr">Attributes</param>
+        /// <param name="chr">Char</param>
         public void FillRect(int x, int y, int w, int h, short atr, char chr)
         {
             short width = Size.X, height = Size.Y;
@@ -73,14 +100,69 @@ namespace _2k48
                 }
         }
 
+        /// <summary>
+        /// SetText() but with attributes
+        /// </summary>
+        /// <param name="x">X coord of first char</param>
+        /// <param name="y">Line number</param>
+        /// <param name="text">Text to place</param>
+        /// <param name="atr">Char Attributes for the text</param>
+        public void SetTextAndAttribute(int x, int y, string text, short atr)
+        {
+            for (int i = x; i < x + text.Length; i++)
+            {
+                Buffer[y * Size.X + i].Attributes = atr;
+                Buffer[y * Size.X + i].Char.UnicodeChar = text[i - x];
+            }
+        }
+
+        /// <summary>
+        /// Places text into buffer
+        /// </summary>
+        /// <param name="x">X coordinate of first char</param>
+        /// <param name="y">Line number</param>
+        /// <param name="text">Text to place</param>
+        public void SetText(int x, int y, string text)
+        {
+            for (int i = x; i < x + text.Length; i++)
+            {
+
+                Buffer[y * Size.X + i].Char.UnicodeChar = text[i - x];
+            }
+        }
+
+        /// <summary>
+        /// Prints a block of text.
+        /// </summary>
+        /// <param name="x">X location of topleft corner</param>
+        /// <param name="y">Y location of topleft corner</param>
+        /// <param name="data">Multiline string</param>
+        public void WriteImg(int x, int y, string[] data)
+        {
+            int i = 0;
+            foreach (string line in data)
+            {
+                SetText(x, y + i, line);
+                i++;
+            }
+        }
     }
+
+    /// <summary>
+    /// Windows console API
+    /// </summary>
     public static class Win32
     {
-        [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+#pragma warning disable CA1401 // P/Invokes should not be visible
+
+        [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+
         public static extern SafeFileHandle CreateFile(string fileName, [MarshalAs(UnmanagedType.U4)] uint fileAccess, [MarshalAs(UnmanagedType.U4)] uint fileShare, IntPtr securityAttributes, [MarshalAs(UnmanagedType.U4)] FileMode creationDisposition, [MarshalAs(UnmanagedType.U4)] int flags, IntPtr template);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool WriteConsoleOutput(SafeFileHandle hConsoleOutput, CharInfo[] lpBuffer, Coord dwBufferSize, Coord dwBufferCoord, ref SmallRect lpWriteRegion);
+
+#pragma warning restore CA1401 // P/Invokes should not be visible
 
         [StructLayout(LayoutKind.Sequential)]
         public struct Coord
@@ -102,6 +184,9 @@ namespace _2k48
             [FieldOffset(0)] public byte AsciiChar;
         }
 
+        /// <summary>
+        /// Struct that contains a char and its attributes
+        /// </summary>
         [StructLayout(LayoutKind.Explicit)]
         public struct CharInfo
         {
@@ -109,6 +194,9 @@ namespace _2k48
             [FieldOffset(2)] public short Attributes;
         }
 
+        /// <summary>
+        /// Windows.h struct for a rectange
+        /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct SmallRect
         {
@@ -117,7 +205,11 @@ namespace _2k48
             public short Right;
             public short Bottom;
         }
-        public enum Color : byte
+
+        /// <summary>
+        /// Enumerator for 16 console colors
+        /// </summary>
+        public enum CColor : byte
         {
             Black,
             Blue,
@@ -136,7 +228,14 @@ namespace _2k48
             LtYellow,
             White
         }
-        public static short TwoColor(Color bg, Color fg)
+
+        /// <summary>
+        /// Converts two CColors to a short.
+        /// </summary>
+        /// <param name="bg">Char background color</param>
+        /// <param name="fg">Char color</param>
+        /// <returns>short</returns>
+        public static short TwoColor(CColor bg, CColor fg)
         {
             return (short)((byte)bg << 4 | (byte)fg);
         }

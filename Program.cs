@@ -1,24 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 
 namespace _2k48
 {
     class Program
     {
-        public static Congine engine;
-        
+        public static Congine engine;        
+
+        /// <summary>
+        /// Entry point for the program
+        /// </summary>
+        /// <param name="args">Console args</param>
         static void Main(string[] args)
         {
-            engine = new Congine(42,22);
-            Game.Game g = new Game.Game(ref engine, 0);
-            g.Run();
-                        
-        }
+            engine = new Congine(55,21);
+            Console.SetCursorPosition(0, 23);
+            Game.Game g = new Game.Game(ref engine, 4); //auto shows logo
 
-    }
-    
+            Console.ReadKey(); //press key to start
+
+            g.Run(); //! gamedev = ez               
+        }
+    }   
 }
