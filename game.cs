@@ -35,10 +35,10 @@ namespace _2k48
                 repeat = 0;
                 Playfield = new int[4, 4]
                 {
-                    {2,4,2,2},
-                    {2,2,2,0},
-                    {2,2,4,2},
-                    {2,0,0,4}
+                    {0,0,0,0},
+                    {0,0,0,0},
+                    {0,0,0,0},
+                    {0,0,0,0}
 
                 };
                 Size = size;
@@ -58,6 +58,8 @@ namespace _2k48
             /// <returns></returns>
             public int Run()
             {
+                CreateNewBlock();
+                CreateNewBlock();
                 Render(true);
                 while (true)
                 {
@@ -130,7 +132,7 @@ namespace _2k48
                 for (int y = 0; y < 4; y++)
                     for (int x = 0; x < 23; x++)
                     {
-                        ge.SetChar(x + xOffset, y + i, Resources.ezwin[y * 23 + x], (short)((y < 3) && (x > 1) && (x < 21) ? 0x16 : 0x01));
+                        ge.SetChar(x + xOffset, y + i, Resources.ezwin[y * 23 + x], (short)((y < 3) && (x > 1) && (x < 21) ? 0x16 : ge.GetAtr(x + xOffset, y + i, 0xf0) | 0x01));
                     }
                 ge.SetTextAndAttribute(12 + xOffset, 1 + i, "Victory", 0x1f);
                 ge.SetTextAndAttribute(12 + xOffset, 2 + i, "Royale", 0x1f);
@@ -159,10 +161,10 @@ namespace _2k48
                 ge.SetTextAndAttribute(40, 4, "Matic Babnik", 0x87);
                 ge.SetTextAndAttribute(39, 8, "Score:", 0x80);
                 ge.SetTextAndAttribute(39, 9, Score.ToString(), 0x80);
-
+#if DEBUG
                 ge.SetTextAndAttribute(40, 14, InputState.ToString(), 0xCF);
                 ge.SetTextAndAttribute(40, 15, repeat.ToString(), 0xCF);
-
+#endif
                 if (refresh) ge.WriteToConsole(); //update the console
             }
 
@@ -201,7 +203,7 @@ namespace _2k48
             /// <param name="dir">direction</param>
             private void MoveAndMerge(Move dir)
             {
-                bool[,] antiDoubleMerge = new bool[4,4];
+                bool[,] antiDoubleMerge = new bool[4, 4];
                 if ((byte)dir != 0) Rotate(ref Playfield, (byte)dir);
 
                 for (int y = 0; y < Size; y++)
@@ -218,9 +220,9 @@ namespace _2k48
                             }
                             if (x + maxMove + 1 < 4)
                             {
-                                if (Playfield[x + maxMove, y] == Playfield[x + maxMove + 1, y] && !antiDoubleMerge[x+maxMove+1,y])
+                                if (Playfield[x + maxMove, y] == Playfield[x + maxMove + 1, y] && !antiDoubleMerge[x + maxMove + 1, y])
                                 {
-                                    
+
                                     antiDoubleMerge[x + maxMove + 1, y] = true;
                                     Playfield[x + maxMove + 1, y] *= 2; // merge
                                     Playfield[x + maxMove, y] = 0;

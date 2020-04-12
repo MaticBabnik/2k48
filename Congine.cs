@@ -151,6 +151,28 @@ namespace _2k48
             Buffer[y * Size.X + x].Attributes = atr;
             Buffer[y * Size.X + x].Char.AsciiChar = chr;
         }
+        /// <summary>
+        /// Gets attributes for a char in buffer
+        /// </summary>
+        /// <param name="x">X coord</param>
+        /// <param name="y">Y coord</param>
+        /// <returns>Attributes</returns>
+        public short GetAtr(int x, int y) 
+        {
+            return  Buffer[y * Size.X + x].Attributes;
+        }
+        /// <summary>
+        /// GetAtr(x,y) & AND
+        /// </summary>
+        /// <param name="x">x coord</param>
+        /// <param name="y">y coord</param>
+        /// <param name="AND">used for bitwise logic magic</param>
+        /// <returns>Attributes but with bitwise magic</returns>
+        public short GetAtr(int x, int y, short AND)
+        {
+            return (short)(Buffer[y * Size.X + x].Attributes & AND);
+
+        }
     }
 
     /// <summary>
