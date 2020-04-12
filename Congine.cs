@@ -126,8 +126,8 @@ namespace _2k48
         {
             for (int i = x; i < x + text.Length; i++)
             {
-
-                Buffer[y * Size.X + i].Char.UnicodeChar = text[i - x];
+                var a = System.Text.Encoding.ASCII.GetBytes(text);
+                Buffer[y * Size.X + i].Char.AsciiChar = a[i - x];
             }
         }
 
@@ -145,6 +145,11 @@ namespace _2k48
                 SetText(x, y + i, line);
                 i++;
             }
+        }
+        public void SetChar(int x, int y, byte chr, short atr)
+        {
+            Buffer[y * Size.X + x].Attributes = atr;
+            Buffer[y * Size.X + x].Char.AsciiChar = chr;
         }
     }
 

@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Threading;
 namespace _2k48
 {
     namespace Game
@@ -35,10 +35,10 @@ namespace _2k48
                 repeat = 0;
                 Playfield = new int[4, 4]
                 {
+                    {2,0,0,0},
                     {0,0,0,0},
-                    {0,2,2,0},
-                    {0,0,0,0},
-                    {0,2,0,2}
+                    {0,0,2,0},
+                    {0,0,0,0}
 
                 };
                 Size = size;
@@ -58,7 +58,7 @@ namespace _2k48
             /// <returns></returns>
             public int Run()
             {
-                Render();
+                Render(true);
                 while (true)
                 {
                     nInputState = GetInput();
@@ -77,14 +77,69 @@ namespace _2k48
 
                     Score = getScore(ref Playfield, Size);
 
-                    Render();
+                    Render(true);
+
+                    var s = CheckState();
+                    if (s == State.Lose)
+                    {
+                        for (int i = 0; i < 3; i++)
+                        {
+                            Render(true);
+                            Thread.Sleep(300);
+                            ge.FillBuffer(' ', 0x00);
+                            ge.WriteToConsole();
+                            Thread.Sleep(300);
+                        }
+                        return Score;
+                    }
+                    else if (s == State.Win)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+
+                        ge.FillBuffer(' ', Win32.TwoColor(Win32.CColor.Black, Win32.CColor.White));
+                        ge.WriteToConsole();
+                        int xOffset = (55 - 23)/2;
+                        for (int i = 0; i < 8; i++)
+                        {
+                            Render(false);
+                            DrawWinScreen(xOffset, i);
+                            System.Threading.Thread.Sleep(100);
+                            ge.WriteToConsole();
+
+                        }
+                        ge.FillBuffer(' ',0xff);
+                        DrawWinScreen(xOffset, 10);
+                        ge.WriteToConsole();
+                        System.Threading.Thread.Sleep(300);
+                        ge.FillBuffer(' ', 0x00);
+                        DrawWinScreen(xOffset, 10);
+                        ge.WriteToConsole();
+                        System.Threading.Thread.Sleep(5000);
+                        return Score;
+                    }
                 }
+            }
+
+            /// <summary>
+            /// Draws win screen at the specified position
+            /// </summary>
+            /// <param name="xOffset">x coord</param>
+            /// <param name="i">y coord</param>
+            private void DrawWinScreen(int xOffset, int i)
+            {
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 23; x++)
+                    {
+                        ge.SetChar(x + xOffset, y + i, Resources.ezwin[y * 23 + x], (short)((y < 3) && (x > 1) && (x < 21) ? 0x16 : 0x01));
+                    }
+                ge.SetTextAndAttribute(12 + xOffset, 1 + i, "Victory", 0x1f);
+                ge.SetTextAndAttribute(12 + xOffset, 2 + i, "Royale", 0x1f);
             }
 
             /// <summary>
             /// Renders the game
             /// </summary>
-            private void Render()
+            private void Render(bool refresh)
             {
                 ge.FillBuffer(' ', 0x0F);                // clear the buffer
 
@@ -108,7 +163,7 @@ namespace _2k48
                 ge.SetTextAndAttribute(40, 14, InputState.ToString(), 0xCF);
                 ge.SetTextAndAttribute(40, 15, repeat.ToString(), 0xCF);
 
-                ge.WriteToConsole(); //update the console
+                if (refresh) ge.WriteToConsole(); //update the console
             }
 
             /// <summary>
@@ -379,6 +434,16 @@ namespace _2k48
             }
 
             /// <summary>
+            /// Game state enum
+            /// </summary>
+            enum State
+            {
+                Normal,
+                Win,
+                Lose
+            }
+
+            /// <summary>
             /// (Bad Code BTW) converts tile number into charAttributes
             /// </summary>
             /// <param name="num">Char attributes</param>
@@ -415,6 +480,12 @@ namespace _2k48
                 return 0x00;
             }
 
+            /// <summary>
+            /// Calculates the score
+            /// </summary>
+            /// <param name="playfield">Reference to playfield array</param>
+            /// <param name="size">Game size</param>
+            /// <returns></returns>
             private int getScore(ref int[,] playfield, int size)
             {
                 int score = 0;
@@ -424,6 +495,41 @@ namespace _2k48
                         score += playfield[x, y];
                     }
                 return score;
+            }
+
+            /// <summary>
+            /// Checks if there is a 2048 tile, or if the game is still solvable
+            /// </summary>
+            /// <returns>State</returns>
+            private State CheckState()
+            {
+                bool movePossible = false;
+                bool win = false;
+                for (int x = 0; x < Size; x++)
+                    for (int y = 0; y < Size; y++)
+                    {
+                        if (Playfield[x, y] == 0) movePossible = true;
+                        if (Playfield[x, y] == 2048) win = true;
+
+                    }
+                if (win) return State.Win;
+                if (movePossible) return State.Normal;
+                else
+                {
+                    int moveCounter = 0;
+                    for (int a = 0; a < Size - 1; a++)
+                        for (int b = 0; b < Size; b++)
+                        {
+                            moveCounter += Playfield[a, b] == Playfield[a + 1, b] ? 1 : 0;
+                            moveCounter += Playfield[b, a] == Playfield[b, a + 1] ? 1 : 0;
+                        }
+                    if (moveCounter == 0)
+                    {
+                        return State.Lose;
+                    }
+
+                }
+                return State.Normal;
             }
         }
     }
