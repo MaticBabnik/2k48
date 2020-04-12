@@ -35,10 +35,10 @@ namespace _2k48
                 repeat = 0;
                 Playfield = new int[4, 4]
                 {
-                    {2,0,0,0},
-                    {0,0,0,0},
-                    {0,0,2,0},
-                    {0,0,0,0}
+                    {2,4,2,2},
+                    {2,2,2,0},
+                    {2,2,4,2},
+                    {2,0,0,4}
 
                 };
                 Size = size;
@@ -98,7 +98,7 @@ namespace _2k48
 
                         ge.FillBuffer(' ', Win32.TwoColor(Win32.CColor.Black, Win32.CColor.White));
                         ge.WriteToConsole();
-                        int xOffset = (55 - 23)/2;
+                        int xOffset = (55 - 23) / 2;
                         for (int i = 0; i < 8; i++)
                         {
                             Render(false);
@@ -107,7 +107,7 @@ namespace _2k48
                             ge.WriteToConsole();
 
                         }
-                        ge.FillBuffer(' ',0xff);
+                        ge.FillBuffer(' ', 0xff);
                         DrawWinScreen(xOffset, 10);
                         ge.WriteToConsole();
                         System.Threading.Thread.Sleep(300);
@@ -195,189 +195,86 @@ namespace _2k48
                 }
                 else return false;
             }
-
-            //TODO REWRITE THIS CRAP its over 100 lines
-            //TODO MAKE A VARIANT THAT JUST CHECKS IF THE MOVE IS POSSIBLE/CHANGES STUFF
             /// <summary>
-            /// Changes the playfield
+            /// Moves and merges tiles
             /// </summary>
-            /// <param name="dir">Move Direction</param>
+            /// <param name="dir">direction</param>
             private void MoveAndMerge(Move dir)
             {
-                switch (dir)
+                bool[,] antiDoubleMerge = new bool[4,4];
+                if ((byte)dir != 0) Rotate(ref Playfield, (byte)dir);
+
+                for (int y = 0; y < Size; y++)
                 {
-                    case Move.Right:
-                        for (int y = 0; y < Size; y++)
-                        {
-                            for (int x = Size - 2; x >= 0; x--) //we dont have to check the rightmost tile, since its content cant be moved
+                    for (int x = Size - 2; x >= 0; x--) //we dont have to check the rightmost tile, since its content cant be moved
+                    {
+                        if (Playfield[x, y] != 0)
+                        {// the cell isnt empty
+                            int maxMove = MaxMove(x, y);
+                            if (maxMove > 0)
                             {
-                                if (Playfield[x, y] != 0)
-                                {// the cell isnt empty
-                                    int maxMove = MaxMove(x, y, dir);
-                                    if (maxMove > 0)
-                                    {
-                                        Playfield[x + maxMove, y] = Playfield[x, y];
-                                        Playfield[x, y] = 0;
-                                    }
-                                    if (x + maxMove + 1 < 4)
-                                    {
-                                        if (Playfield[x + maxMove, y] == Playfield[x + maxMove + 1, y])
-                                        {
-                                            Playfield[x + maxMove + 1, y] *= 2;
-                                            Playfield[x + maxMove, y] = 0;
-                                        }
-                                    }
-
+                                Playfield[x + maxMove, y] = Playfield[x, y];
+                                Playfield[x, y] = 0;
+                            }
+                            if (x + maxMove + 1 < 4)
+                            {
+                                if (Playfield[x + maxMove, y] == Playfield[x + maxMove + 1, y] && !antiDoubleMerge[x+maxMove+1,y])
+                                {
+                                    
+                                    antiDoubleMerge[x + maxMove + 1, y] = true;
+                                    Playfield[x + maxMove + 1, y] *= 2; // merge
+                                    Playfield[x + maxMove, y] = 0;
                                 }
                             }
-                        }
-                        break;
 
-                    case Move.Left:
-                        for (int y = 0; y < Size; y++)
+                        }
+                    }
+                }
+
+                if ((byte)dir != 0) Rotate(ref Playfield, 4 - (byte)dir);
+            }
+            /// <summary>
+            /// Rotates array
+            /// </summary>
+            /// <param name="a">array to rotate</param>
+            /// <param name="times">each rotation = 90 deg cw</param>
+            private void Rotate(ref int[,] a, int times)
+            {
+                int tmp;
+                for (int t = 0; t < times; t++)
+                {
+                    for (int i = 0; i < Size / 2; i++)
+                    {
+                        for (int j = i; j < Size - i - 1; j++)
                         {
-                            for (int x = 1; x < Size; x++) //we dont have to check the leftmost tile, since its content cant be moved
-                            {
-                                if (Playfield[x, y] != 0)
-                                {// the cell isnt empty
-                                    int maxMove = MaxMove(x, y, dir);
-                                    if (maxMove > 0)
-                                    {
-                                        Playfield[x - maxMove, y] = Playfield[x, y];
-                                        Playfield[x, y] = 0;
-                                    }
-                                    if (x - maxMove - 1 >= 0)
-                                    {
-                                        if (Playfield[x - maxMove, y] == Playfield[x - maxMove - 1, y])
-                                        {
-                                            Playfield[x - maxMove - 1, y] *= 2;
-                                            Playfield[x - maxMove, y] = 0;
-                                        }
-                                    }
-
-                                }
-                            }
+                            tmp = a[i, j];
+                            a[i, j] = a[j, Size - i - 1];
+                            a[j, Size - i - 1] = a[Size - i - 1, Size - j - 1];
+                            a[Size - i - 1, Size - j - 1] = a[Size - j - 1, i];
+                            a[Size - j - 1, i] = tmp;
                         }
-                        break;
-                    case Move.Up:
-                        for (int x = 0; x < Size; x++)
-                        {
-                            for (int y = 1; y < Size; y++) //we dont have to check the top tile, since its content cant be moved
-                            {
-                                if (Playfield[x, y] != 0)
-                                {// the cell isnt empty
-                                    int maxMove = MaxMove(x, y, dir);
-                                    if (maxMove > 0)
-                                    {
-                                        Playfield[x, y - maxMove] = Playfield[x, y];
-                                        Playfield[x, y] = 0;
-                                    }
-                                    if (y - maxMove - 1 >= 0)
-                                    {
-                                        if (Playfield[x, y - maxMove] == Playfield[x, y - maxMove - 1])
-                                        {
-                                            Playfield[x, y - maxMove - 1] *= 2;
-                                            Playfield[x, y - maxMove] = 0;
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
-                        break;
-                    case Move.Down:
-                        for (int x = 0; x < Size; x++)
-                        {
-                            for (int y = Size - 2; y >= 0; y--) //we dont have to check the bottom tile, since its content cant be moved
-                            {
-                                if (Playfield[x, y] != 0)
-                                {// the cell isnt empty
-                                    int maxMove = MaxMove(x, y, dir);
-                                    if (maxMove > 0)
-                                    {
-                                        Playfield[x, y + maxMove] = Playfield[x, y];
-                                        Playfield[x, y] = 0;
-                                    }
-                                    if (y + maxMove + 1 < Size)
-                                    {
-                                        if (Playfield[x, y + maxMove] == Playfield[x, y + maxMove + 1])
-                                        {
-                                            Playfield[x, y + maxMove + 1] *= 2;
-                                            Playfield[x, y + maxMove] = 0;
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
-                        break;
+                    }
                 }
             }
 
-            //TODO MAKE IT BETTER
             /// <summary>
             /// Returns max move distance for a tile. (Merge is not included)
             /// </summary>
             /// <param name="x">Tile X</param>
             /// <param name="y">Tile Y</param>
-            /// <param name="dir">Move direction</param>
             /// <returns>Max move distance.</returns>
-            private int MaxMove(int x, int y, Move dir)
-            {
-                switch (dir)
+            private int MaxMove(int x, int y)
+            { // at this time playfield is rotated
+                for (int i = 0; i < Size; i++)
                 {
-                    case Move.Right:
-                        for (int i = 0; i < Size; i++)
+                    if (i + x + 1 < Size)
+                    {//exists
+                        if (Playfield[i + 1 + x, y] != 0)
                         {
-                            if (i + x + 1 < Size)
-                            {//exists
-                                if (Playfield[i + 1 + x, y] != 0)
-                                {
-                                    return i;
-                                }
-                            }
-                            else return i;
+                            return i;
                         }
-                        return 0;
-                    case Move.Left:
-                        for (int i = 0; i < Size; i++)
-                        {
-                            if (x - i - 1 >= 0)
-                            {//exists
-                                if (Playfield[x - i - 1, y] != 0)
-                                {
-                                    return i;
-                                }
-                            }
-                            else return i;
-                        }
-                        return 0;
-                    case Move.Down:
-                        for (int i = 0; i < Size; i++)
-                        {
-                            if (i + y + 1 < Size)
-                            {//exists
-                                if (Playfield[x, y + i + 1] != 0)
-                                {
-                                    return i;
-                                }
-                            }
-                            else return i;
-                        }
-                        return 0;
-                    case Move.Up:
-                        for (int i = 0; i < Size; i++)
-                        {
-                            if (y - i - 1 >= 0)
-                            {//exists
-                                if (Playfield[x, y - i - 1] != 0)
-                                {
-                                    return i;
-                                }
-                            }
-                            else return i;
-                        }
-                        return 0;
+                    }
+                    else return i;
                 }
                 return 0;
             }
@@ -424,13 +321,13 @@ namespace _2k48
             /// <summary>
             /// Direction enum
             /// </summary>
-            enum Move
+            enum Move : byte
             {
-                NoMove,
-                Up,
-                Right,
-                Down,
-                Left
+                NoMove = 69,
+                Up = 1,
+                Right = 0,
+                Down = 3,
+                Left = 2
             }
 
             /// <summary>
